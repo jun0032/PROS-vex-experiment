@@ -14,9 +14,9 @@
 ### Run the following commands to install LemLib
 
 *adds LemLib's stable depot*
-pros c add-depot LemLib https://raw.githubusercontent.com/LemLib/LemLib/depot/stable.json
+<br />pros c add-depot LemLib https://raw.githubusercontent.com/LemLib/LemLib/depot/stable.json
 
 *applies latest stable version of LemLib*
-pros c apply LemLib # 
+<br />pros c apply LemLib
 
 main.cpp is from the https://github.com/LemLib/LemLib/blob/stable/src/main.cpp 
