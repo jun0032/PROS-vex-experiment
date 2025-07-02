@@ -1,5 +1,6 @@
 #include "main.h"
 #include "lemlib/api.hpp" // IWYU pragma: keep
+#include "pros/misc.h"
 
 // controller
 pros::Controller controller(pros::E_CONTROLLER_MASTER);
@@ -25,11 +26,11 @@ pros::Imu imu(1);
 // drivetrain settings
 lemlib::Drivetrain drivetrain(&leftMotors, // left motor group
                               &rightMotors, // right motor group
-                              10, // 10 inch track width
-                              lemlib::Omniwheel::NEW_4, // using new 4" omnis
+                              11.75, // 10 inch track width
+                              lemlib::Omniwheel::NEW_325, // using new 4" omnis
                               360, // drivetrain rpm is 360
                               2 // horizontal drift is 2. If we had traction wheels, it would have been 8
-);
+); // wheel base - 8.125"
 
 // lateral motion controller
 lemlib::ControllerSettings linearController(10, // proportional gain (kP)
@@ -44,24 +45,26 @@ lemlib::ControllerSettings linearController(10, // proportional gain (kP)
 );
 
 // angular motion controller
-lemlib::ControllerSettings angularController(2, // proportional gain (kP)
-                                             0, // integral gain (kI)
-                                             10, // derivative gain (kD)
-                                             3, // anti windup
-                                             1, // small error range, in degrees
-                                             100, // small error range timeout, in milliseconds
-                                             3, // large error range, in degrees
-                                             500, // large error range timeout, in milliseconds
+lemlib::ControllerSettings angularController(1, // proportional gain (kP)
+                                             0.01, // integral gain (kI)
+                                             0.2, // derivative gain (kD)
+                                             0, // anti windup
+                                             0, // small error range, in degrees
+                                             0, // small error range timeout, in milliseconds
+                                             0, // large error range, in degrees
+                                             0, // large error range timeout, in milliseconds
                                              0 // maximum acceleration (slew)
 );
 
-// sensors for odometry
+
 // lemlib::OdomSensors sensors(&vertical, // vertical tracking wheel
 //                             nullptr, // vertical tracking wheel 2, set to nullptr as we don't have a second one
 //                             &horizontal, // horizontal tracking wheel
 //                             nullptr, // horizontal tracking wheel 2, set to nullptr as we don't have a second one
 //                             &imu // inertial sensor
 // );
+
+// sensors for odometry
 lemlib::OdomSensors sensors(nullptr, // novertical tracking wheel
                             nullptr, // vertical tracking wheel 2, set to nullptr as we don't have a second one
                             nullptr, // no horizontal tracking wheel
@@ -137,6 +140,8 @@ ASSET(example_txt); // '.' replaced with "_" to make c++ happy
  * This is an example autonomous routine which demonstrates a lot of the features LemLib has to offer
  */
 void autonomous() {
+    chassis.setPose(0, 0, 0);
+    chassis.turnToHeading(90, 100000);
 	/*
     // Move to x: 20 and y: 15, and face heading 90. Timeout set to 4000 ms
     chassis.moveToPose(20, 15, 90, 4000);
@@ -165,8 +170,20 @@ void autonomous() {
     chassis.waitUntilDone();
     pros::lcd::print(4, "pure pursuit finished!");
 	*/
-	chassis.moveToPoint(10, 10, 1000, {.forwards = false, .maxSpeed = 127}, true);
-	chassis.turnToHeading(90,1000);
+	
+}
+
+void check_controls() {
+    if (controller.get_digital(DIGITAL_Y)) {
+        // chassis.moveToPoint(10, 10, 1000, {.forwards = false, .maxSpeed = 127}, true);
+	    chassis.turnToHeading(90,1000);
+        pros::lcd::print(4, "Y Pressed");
+        
+    }
+    // if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_X)) {
+    //     chassis.moveToPoint(10, 10, 1000, {.forwards = false, .maxSpeed = 127}, true);
+	//     chassis.turnToHeading(90,1000);
+    // }
 }
 
 /**
@@ -183,5 +200,7 @@ void opcontrol() {
         chassis.arcade(leftY, rightX);
         // delay to save resources
         pros::delay(10);
+
+        check_controls();
     }
 }
