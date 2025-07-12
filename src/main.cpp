@@ -45,7 +45,7 @@ lemlib::ControllerSettings linearController(0, // proportional gain (kP)
 );
 
 // angular motion controller
-lemlib::ControllerSettings angularController(4, // proportional gain (kP)
+lemlib::ControllerSettings angularController(0.1, // proportional gain (kP)
                                              0, // integral gain (kI)
                                              0, // derivative gain (kD)
                                              0, // anti windup
@@ -113,6 +113,7 @@ void initialize() {
             pros::lcd::print(1, "Y: %f", chassis.getPose().y); // y
             pros::lcd::print(2, "Theta: %f", chassis.getPose().theta); // heading
             pros::lcd::print(3, "kP: %f", angularController.kP); // kP
+            pros::lcd::print(4, "kD: %f", angularController.kD); // kD
             // log position telemetry
             lemlib::telemetrySink()->info("Chassis pose: {}", chassis.getPose());
             // delay to save resources
@@ -147,21 +148,49 @@ void autonomous() {
     chassis.turnToHeading(90, 100000);
 }
 
+// not completely sure how the turn task works, but this seems to work - Jun
+pros::Task* turnTask = nullptr;
+
+void turnTo90Task() {
+    chassis.setPose(0, 0, 0);
+    chassis.turnToHeading(90, 100000);
+}
+
 void check_controls() {
+    
     if (controller.get_digital(DIGITAL_Y)) {
-        // set position to x:0, y:0, heading:0
-        chassis.setPose(0, 0, 0);
-        // turn to face heading 90 with a very long timeout
-        chassis.turnToHeading(90, 100000);
+        // Start turning in a separate task
+        if (turnTask == nullptr) {
+            turnTask = new pros::Task(turnTo90Task);
+
+            // Reinitialize the chassis to ensure it uses the latest settings (Don't think this works but leaving it here for reference)
+            lemlib::Chassis chassis = lemlib::Chassis(drivetrain, linearController, angularController, sensors, &throttleCurve, &steerCurve);
+        }
     }
-    if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_X)) {
-        angularController.kP ++;
+    if (controller.get_digital(DIGITAL_X)) {
+        // Stop the turn
+        chassis.cancelMotion();
+        // Optionally, clean up the task
+        if (turnTask != nullptr) {
+            pros::delay(20);
+            delete turnTask;
+            turnTask = nullptr;
+        }
     }
-    // if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_X)) {
-    //     chassis.moveToPoint(10, 10, 1000, {.forwards = false, .maxSpeed = 127}, true);
-	//     chassis.turnToHeading(90,1000);
-    //}
-    pros::delay(50);
+    if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_LEFT)) {
+        angularController.kP += 0.1;
+    }
+    if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_RIGHT)) {
+        angularController.kP -= 0.1;
+    }
+    if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_UP)) {
+        angularController.kD += 0.1;
+    }
+    if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_DOWN)) {
+        angularController.kD -= 0.1;
+    }
+
+    pros::delay(100);
 }
 
 /**
